@@ -15,3 +15,5 @@ if __name__ == "__main__":
     # Instantiate timeseries class
     timeseries = Timeseries(cfg.PATH_RAW_DATA, cfg)
     timeseries.setup()
+    
+    print("Commit 1")
