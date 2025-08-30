@@ -8,12 +8,13 @@ if __name__ == "__main__":
     cfg = config.Constants()
 
     # Instantiate operations class
-    operations = Operations(cfg.PATH_RAW_DATA, cfg)
-    operations.setup()
-    operations.print_expected_delta()
+    if True:
+        operations = Operations(cfg.PATH_RAW_DATA, cfg)
+        operations.setup()
+        operations.print_expected_delta()
     
     # Instantiate timeseries class
-    timeseries = Timeseries(cfg.PATH_RAW_DATA, cfg)
-    timeseries.setup()
+    if True:
+        timeseries = Timeseries(cfg.PATH_RAW_DATA, cfg)
+        input_sheet = timeseries.setup()
     
-    print("Commit 1")

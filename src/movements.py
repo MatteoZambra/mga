@@ -19,6 +19,14 @@ class DataUtils:
             )
         return reader
     #end
+    
+    def get_formatted_date(date_list, format_list, separator):
+        datetime_date = pd.to_datetime(
+            separator.join(date_list),
+            format = separator.join(format_list)
+        )
+        return datetime_date
+    #end
 #end
 
 
@@ -57,8 +65,8 @@ class Movements:
                     pd.to_datetime(
                         x["Date"].values,
                         format = self.config.DATE_SEPARATION.join(
-                            ("%d"," %m", "%Y")
-                        ).replace(" ", "")
+                            ("%d","%m", "%Y")
+                        )#.replace(" ", "")
                     )
                 )
             )
@@ -215,25 +223,124 @@ class Timeseries(Movements):
             config
         ):
         super().__init__(path_data, config)
+        self.stock_init = np.loadtxt(self.config.PATH_INIT_VALUE)
     #end
     
     def setup(self):
         # Get raw data
         ops_sheet = self.get_raw_data()
         
+        # Prepare the input-output movements sheet,
+        # with chronological order
+        inout_sheet = self.create_timeseries_worksheet(ops_sheet)
+        
+        # Aggregate monthly operations
+        
+        
+        return inout_sheet
+    #end
+    
+    def create_timeseries_worksheet(self, ops_sheet):
+        r"""
+        This function absorbs the raw movements sheet `ops_sheet` and
+        and returns the chronologically ordered table of the fluxes:
+            - Input (istantaneous)
+            - Output (istantaneous)
+            - Cumulative input
+            - Cumulative output
+            - Availability (istantaneous)
+        
+        ---
+        
+        The availability is evaluated as the sum
+        
+            .. math::
+                \mathrm{Available}(t) = \sum_{k = 0}^{t}
+                \mathrm{Available}(k) + \mathrm{Input}(k) - \mathrm{Output}(k)
+        
+        At the end of this method, we shall have a table with as many rows
+        as the days in the year, and the aforementioned columns. This helps 
+        in evaluating the average spending volume (aggregated) for each month
+        and to modellize the capital evolution.
+        """
+        
+        def _complete_with_first_and_last_day(df_sheet):
+            """
+            This local method sets the initial and final dates of the 
+            year, if these dates are not recorded (no input/output) in
+            these dates in the raw movements data
+            """
+            # Add Jan 1st and Dec 31st, if missing
+            jan_1st = DataUtils.get_formatted_date(
+                date_list = ["01", "01", str(self.config.YEAR)],
+                format_list = ["%d", "%m", "%Y"],
+                separator = self.config.DATE_SEPARATION
+            )
+            dec_31st = DataUtils.get_formatted_date(
+                date_list = ["31", "12", str(self.config.YEAR)],
+                format_list = ["%d", "%m", "%Y"],
+                separator = self.config.DATE_SEPARATION
+            )
+            # Mock data to place Jan 1st and Dec 31st
+            fill_data = {"Category": [None], "Amount": [0.], "In": [0.], "Out": [0.]}
+            if not jan_1st in df_sheet["Date"]:
+                row_jan_1st = pd.DataFrame(data = {"Date": jan_1st} | fill_data)
+                df_sheet = pd.concat([row_jan_1st, df_sheet], axis = 0)
+            if not dec_31st in df_sheet["Date"]:
+                row_dec_31st = pd.DataFrame(data = {"Date": dec_31st} | fill_data)
+                df_sheet = pd.concat([df_sheet, row_dec_31st], axis = 0)
+            return df_sheet
+        #end
+        
         # Add relevant columns
         ops_sheet = (
             ops_sheet
-            
             # --- Define input and output flows
             .assign(
                 In = lambda x: x[x["Amount"] > 0]["Amount"],
-                Out = lambda x: -1. * x[x["Amount"] < 0]["Amount"],
+                Out = lambda x: -1. * x[x["Amount"] < 0]["Amount"]
             )
             .fillna(0.)
         )
         
+        # Complete the dataframe with Jan 1st and Dec 31st, if missing
+        ops_sheet = _complete_with_first_and_last_day(ops_sheet)
+        
+        # Resample, aggregate and define cumulative fluxes
+        ops_sheet = (
+            ops_sheet
+            # --- Group by day
+            .groupby("Date")[["In", "Out"]]
+            .apply("sum")
+            
+            # --- Resample to obtain evenly spaced data
+            .resample(rule = pd.Timedelta("1day"))
+            .sum()
+            
+            # --- Define cumulative inputs and outputs
+            .assign(
+                CumulativeIn = lambda x: x["In"].cumsum(),
+                CumulativeOut = lambda x: x["Out"].cumsum()
+            )
+        )
+        
+        # Initialize the available array, to be set a ops_sheet column
+        available = np.zeros(len(ops_sheet))
+        available[0] = self.stock_init
+        ops_sheet["Available"] = available
+        
+        # Availability = Cumulative input - cumulative output at a given time
+        ops_sheet["Available"] = (
+            ops_sheet["Available"].cumsum()
+            + ops_sheet["CumulativeIn"]
+            - ops_sheet["CumulativeOut"]
+        )
+        
         return ops_sheet
+    #end
+    
+    def get_monthly_operations_aggregates(self, inout_sheet):
+        pass
     #end
 #end
 
