@@ -16,9 +16,9 @@ Useful to make predictions and to evaluate potential investments allocatable vol
 ## Foundation
 The following evolutionary equation is assumed
 
-\begin{equation}
+$$
     \mathbf{x}_t = \mathbf{x}_{t-1} + \Phi(\mathbf{x}, t)
-\end{equation}
+$$
 
 The variable $\mathbf{x}_t$ is the capital volume at time $t$. The temporal resolution is assumed to be monthly.
 The operator $\Phi$ is the one-step-ahead predictor of $\mathbf{x}$ and quantifies the delta between the total income and the total lifestyle cost. 
