@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 from functools import partial
+from dataclasses import dataclass
 
 class DataUtils:
     @staticmethod
@@ -29,6 +30,15 @@ class DataUtils:
     #end
 #end
 
+@dataclass
+class CapitalLinearModelParams:
+    slope: float
+    intercept: float
+    
+    def __call__(self):
+        return self.slope, self.intercept
+    #end
+#end
 
 class Movements:
     """
@@ -233,11 +243,13 @@ class Timeseries(Movements):
         # Prepare the input-output movements sheet,
         # with chronological order
         inout_sheet = self.create_timeseries_worksheet(ops_sheet)
+        self.inout_sheet = inout_sheet
         
         # Aggregate monthly operations
+        monthly_deltas = self.get_monthly_operations_aggregates(inout_sheet)
         
-        
-        return inout_sheet
+        # Obtain capital evolution (linear model) parameters
+        self.fit_regression_coefficients(monthly_deltas)
     #end
     
     def create_timeseries_worksheet(self, ops_sheet):
@@ -340,10 +352,83 @@ class Timeseries(Movements):
     #end
     
     def get_monthly_operations_aggregates(self, inout_sheet):
-        pass
+        """
+        Obtain the net difference between the total input and total
+        output for each month in the year.
+        """
+        
+        monthly_deltas = (
+            inout_sheet
+            .reset_index()
+            .assign(
+                Month = lambda x: x["Date"].dt.month
+            )
+            .groupby("Month")
+            [["In", "Out"]]
+            
+            # --- Sum the input and output fluxes: end-of-month delta
+            .apply(lambda x: x["In"].sum() - x["Out"].sum())
+            .to_frame(name = "Monthly Deltas")
+            .reset_index()
+        )
+        
+        return monthly_deltas
     #end
+    
+    def fit_regression_coefficients(self, monthly_deltas):
+        """
+        Estimation: average the monthly delta and divide for the 
+        number of month days in this year. Gives an estimate of 
+        istantaneous growth. Ie: On daily basis, which is the 
+        increase in capital, given the overall lifestyle cost, income ...
+        The intercept is simply the initial stock value.
+        """
+        
+        # Slope
+        estimated_slope = np.divide(
+            
+            # Average monthly delta
+            monthly_deltas["Monthly Deltas"]
+            .values
+            .mean(),
+            
+            # Average number of month days in this year
+            pd.date_range(
+                start = f"{self.config.YEAR}-01-01",
+                end = f"{self.config.YEAR}-12-31",
+                freq = "MS"
+            )
+            .days_in_month
+            .values
+            .mean()
+        )
+        
+        # Save params
+        self.estimated_lm_params = CapitalLinearModelParams(
+            estimated_slope, self.stock_init
+        )
+    #end
+    
+    def compute_summary_statistics(self):
+        """
+        If necessary, evaluate the average stock and the available
+        stock at the end of the year, ie on Dec 31st.
+        """
+        
+        # NOTE: Consider making Jan 1st and Dec 31st class attributes. 
+        # They are used more than once and rewriting the eval expression
+        # for dates is rather ugly
+        self.average_stock = self.inout_sheet["Available"].mean()
+        self.stock_at_Dec31st = (
+            self
+            .inout_sheet
+            .loc[
+                DataUtils.get_formatted_date(
+                    date_list = ["31", "12", str(self.config.YEAR)],
+                    format_list = ["%d", "%m", "%Y"],
+                    separator = self.config.DATE_SEPARATION
+                ),
+                "Available"
+            ]
+        )
 #end
-
-
-
-
