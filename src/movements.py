@@ -431,4 +431,85 @@ class Timeseries(Movements):
                 "Available"
             ]
         )
+    #end
+#end
+
+class SpendingPatterns(Movements):
+    def __init__(self, path_data, config):
+        super().__init__(path_data, config)
+    #end
+    
+    def fit(self):
+        raw_data = self.get_raw_data()
+        self.extrapolate_expenses_statistics(raw_data)
+    #end
+    
+    def extrapolate_expenses_statistics(self, ops_sheet):
+        """
+        Extrapolate:
+            - Average lag between the same expense item instance
+            - Average and std of each expense item
+        
+        This gives us the means to simulate synthetic data based on
+        the observed year
+        """
+        
+        # Pivot table: from column-expanded view, we obtain a table
+        # with columns == expenses items
+        ops_sheet_categories = (
+            ops_sheet
+            .pivot_table(
+                values = "Amount",
+                columns = "Category",
+                index = "Date"
+            )
+            # .set_index("Date")
+            .resample("1D")
+            .mean()
+        )
+        
+        # Evaluate iter-arrival times, expense items averages and stds
+        lags = {}
+        expenses = {}
+        for col in ops_sheet_categories.columns:
+            dates = (
+                ops_sheet_categories
+                .index[
+                    ops_sheet_categories[col]
+                    .notna()
+                ]
+                .to_series()
+                .diff()
+                .dt
+                .days
+            )
+            lags.update({col : dates})
+            expenses.update({col : ops_sheet_categories[col]})
+        #end
+        
+        self.interarrival_times = lags
+        self.expenses = expenses
+    #end
+    
+    def simulate_yearly_expenses(self):
+        """
+        Once the statistics of expenses inter-arrival times and
+        volumes are estimated, we can simulate a year similar to 
+        the one observed, statistically. Useful for future projection,
+        if the spending habits are constant.
+        """
+        
+        # Get the previously obtained statistics
+        expenses_lags = self.interarrival_times
+        expenses_volumes = self.expenses
+        
+        # Simulate
+        for col, lags in expenses_lags.items():
+            if lags.empty:
+                pass
+            
+            n_samples = int(lags.mean(skipna = True))
+            sampled_lags = np.random.choice(
+                lags, size = n_samples, replace = True
+            )
 #end
