@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from functools import partial
 from dataclasses import dataclass
+import os
+
 
 class DataUtils:
     @staticmethod
@@ -32,6 +34,10 @@ class DataUtils:
 
 @dataclass
 class CapitalLinearModelParams:
+    """
+    Dataclass to store the parameters of capital linear growth.
+    The assumption is that of linear capital increase.
+    """
     slope: float
     intercept: float
     
@@ -49,6 +55,9 @@ class Movements:
     def __init__(self, path_data, config):
         self.path_data = path_data
         self.config = config
+        
+        # Save Jan 1st and Dec 31st, may be handy
+        self.define_year_extremes()
     #end
 
     def get_raw_data(self):
@@ -87,6 +96,20 @@ class Movements:
         )
         
         return raw_data
+    #end
+    
+    def define_year_extremes(self):
+        # Add Jan 1st and Dec 31st, if missing
+        self.jan_1st = DataUtils.get_formatted_date(
+            date_list = ["01", "01", str(self.config.YEAR)],
+            format_list = ["%d", "%m", "%Y"],
+            separator = self.config.DATE_SEPARATION
+        )
+        self.dec_31st = DataUtils.get_formatted_date(
+            date_list = ["31", "12", str(self.config.YEAR)],
+            format_list = ["%d", "%m", "%Y"],
+            separator = self.config.DATE_SEPARATION
+        )
     #end
 #end
 
@@ -282,24 +305,18 @@ class Timeseries(Movements):
             year, if these dates are not recorded (no input/output) in
             these dates in the raw movements data
             """
-            # Add Jan 1st and Dec 31st, if missing
-            jan_1st = DataUtils.get_formatted_date(
-                date_list = ["01", "01", str(self.config.YEAR)],
-                format_list = ["%d", "%m", "%Y"],
-                separator = self.config.DATE_SEPARATION
-            )
-            dec_31st = DataUtils.get_formatted_date(
-                date_list = ["31", "12", str(self.config.YEAR)],
-                format_list = ["%d", "%m", "%Y"],
-                separator = self.config.DATE_SEPARATION
-            )
+            
             # Mock data to place Jan 1st and Dec 31st
             fill_data = {"Category": [None], "Amount": [0.], "In": [0.], "Out": [0.]}
-            if not jan_1st in df_sheet["Date"]:
-                row_jan_1st = pd.DataFrame(data = {"Date": jan_1st} | fill_data)
+            if not self.jan_1st in df_sheet["Date"]:
+                row_jan_1st = pd.DataFrame(
+                    data = {"Date": self.jan_1st} | fill_data
+                )
                 df_sheet = pd.concat([row_jan_1st, df_sheet], axis = 0)
-            if not dec_31st in df_sheet["Date"]:
-                row_dec_31st = pd.DataFrame(data = {"Date": dec_31st} | fill_data)
+            if not self.dec_31st in df_sheet["Date"]:
+                row_dec_31st = pd.DataFrame(
+                    data = {"Date": self.dec_31st} | fill_data
+                )
                 df_sheet = pd.concat([df_sheet, row_dec_31st], axis = 0)
             return df_sheet
         #end
@@ -415,22 +432,42 @@ class Timeseries(Movements):
         stock at the end of the year, ie on Dec 31st.
         """
         
-        # NOTE: Consider making Jan 1st and Dec 31st class attributes. 
-        # They are used more than once and rewriting the eval expression
-        # for dates is rather ugly
         self.average_stock = self.inout_sheet["Available"].mean()
-        self.stock_at_Dec31st = (
-            self
-            .inout_sheet
-            .loc[
-                DataUtils.get_formatted_date(
-                    date_list = ["31", "12", str(self.config.YEAR)],
-                    format_list = ["%d", "%m", "%Y"],
-                    separator = self.config.DATE_SEPARATION
-                ),
-                "Available"
+        self.stock_at_Dec31st = self.inout_sheet.loc[self.dec_31st, "Available"]
+    #end
+    
+    def sumup_printout(self, save_file = False):
+        # Evaluate summary statistics
+        self.compute_summary_statistics()
+        
+        stats = pd.DataFrame(
+            data = [
+                f"{self.stock_init:.2f}",
+                f"{self.stock_at_Dec31st:.2f}",
+                f"{self.average_stock:.2f}",
+                f"{self.estimated_lm_params.slope:.2f}"
+            ],
+            columns = ["Amount (EUR)"],
+            index = [
+                f"Initial stock (at {str(self.jan_1st.date())})",
+                f"Final stock (at {str(self.dec_31st.date())})",
+                "Average stock",
+                "Estimated daily capital growth"
             ]
+        ).reset_index().rename(
+            columns = {"index" : f"Summary statistic year {self.config.YEAR}"}
         )
+        
+        if save_file:
+            stats.to_csv(
+                os.path.join(
+                    self.config.PATH_DATA,
+                    f"summary_metrics_{self.config.YEAR}.csv"
+                ),
+                index = False
+            )
+        
+        print(stats)
     #end
 #end
 
@@ -472,6 +509,8 @@ class SpendingPatterns(Movements):
         lags = {}
         expenses = {}
         for col in ops_sheet_categories.columns:
+            # Get the inter-arrival times between the expenses
+            # of this expense item
             dates = (
                 ops_sheet_categories
                 .index[
@@ -482,34 +521,159 @@ class SpendingPatterns(Movements):
                 .diff()
                 .dt
                 .days
+                .dropna()
             )
+            
+            # Update the associated data structures
             lags.update({col : dates})
             expenses.update({col : ops_sheet_categories[col]})
         #end
         
+        # Save as class attributes, will be useful later
         self.interarrival_times = lags
         self.expenses = expenses
     #end
     
-    def simulate_yearly_expenses(self):
+    def simulate_yearly_expenses(self, rules, save = None):
         """
         Once the statistics of expenses inter-arrival times and
         volumes are estimated, we can simulate a year similar to 
         the one observed, statistically. Useful for future projection,
         if the spending habits are constant.
+        
+        The ``rules`` argument, specified in the configuration file,
+        needs to be given. The hypothesis is that there are constant,
+        predictable expense items, such as salary and rent (if applicable)
+        that are present each month. Simulating these expense items 
+        may lead to unlikely results. The specification of these rules
+        informs the simulation to enforce the given rules and not to
+        simulate the expense items listed.
+        
+        **NOTE**: As now, the simulation implemented is histogram-based. 
+        That is, we sample the most likely values given the observed 
+        values. A more likely version is KDE sampling, so we do not sample
+        observed values based on their actual occurrence frequency.
         """
         
         # Get the previously obtained statistics
         expenses_lags = self.interarrival_times
         expenses_volumes = self.expenses
         
+        # Initialize mock data structure
+        simulated_expenses = {}
+        
         # Simulate
         for col, lags in expenses_lags.items():
             if lags.empty:
-                pass
+                continue
             
-            n_samples = int(lags.mean(skipna = True))
+            if col in rules.keys():
+                simulated_expenses[col] = pd.Series(
+                    data = np.array(
+                        [rules[col]["Amount"]] * len(self.config.MONTHS)
+                    ),
+                    index = [
+                        DataUtils.get_formatted_date(
+                            date_list = [
+                                f"{rules[col]['Day']}",
+                                f"{month:02d}",
+                                str(self.config.YEAR)],
+                            format_list = ["%d", "%m", "%Y"],
+                            separator = self.config.DATE_SEPARATION
+                        )
+                        for month in self.config.MONTHS.values()
+                    ]
+                )
+                continue
+            
+            # Simulate as many expense occurrences as the observed ones
+            # with a dispersion of 10, if the observed expenses are more
+            # than 10 in the original observed data. Otherwise, simply
+            # the number of real occurrences of that item
+            n_expenses = len(expenses_volumes[col].dropna())
+            if n_expenses > 10:
+                n_expenses = n_expenses + np.random.randint(0, 50, size = 1)
+                n_expenses = np.maximum(0, n_expenses)
+            
+            # Statistically likely sequence of occurrences for this expense item
             sampled_lags = np.random.choice(
-                lags, size = n_samples, replace = True
+                lags, size = n_expenses, replace = True
             )
+            
+            # Set the first date and sample dates according to 
+            # the previously evaluated statistics
+            sampled_dates = [
+                pd.Timestamp(np.random.choice(
+                    pd.date_range(
+                        start = self.jan_1st,
+                        end = expenses_lags[col].index[0],
+                        freq = "D"
+                    )
+                ))
+            ]
+            for lag in sampled_lags:
+                date_next = sampled_dates[-1] + pd.Timedelta(days = int(lag))
+                if date_next.year != self.config.YEAR:
+                    continue
+                
+                sampled_dates.append(
+                    sampled_dates[-1] + pd.Timedelta(days = int(lag))
+                )
+            #end
+            
+            # Simulate expense items
+            simulated_expenses[col] = pd.Series(
+                np.random.choice(
+                    expenses_volumes[col].dropna(),
+                    size = len(sampled_dates),
+                    replace = True
+                ),
+                index = sampled_dates,
+                name = col
+            )
+        #end
+        
+        # Obtain the dataframe
+        simulated_expenses = pd.concat(simulated_expenses, axis = 1)
+        
+        # Explode columns
+        simulated_inout = (
+            simulated_expenses
+            
+            # Redefine the date as column
+            .reset_index()
+            .rename(columns = {"index": "Date"})
+            
+            # Undo the pivoting operation, drop nans
+            .melt(
+                id_vars = "Date",
+                value_name = "Amount",
+                var_name = "Category",
+                
+                # Note: the following operation needs to refer to the
+                # variable as it was before the operations pipe, as
+                # we need all and only the columns of that version
+                value_vars = simulated_expenses.columns,
+            )
+            .dropna()
+            .sort_values(by = "Date")
+        )
+        
+        # If the case, save the sheet
+        if save:
+            if self.config.DATA_FORMAT == "xls":
+                data_format = "xlsx"
+            else:
+                data_format = self.config.DATA_FORMAT
+            
+            simulated_inout.to_excel(
+                os.path.join(
+                    self.config.PATH_DATA,
+                    f"Simulated_synthesis_{self.config.YEAR}.{data_format}"
+                ),
+                index = False
+            )
+        
+        return simulated_inout
+    #end
 #end

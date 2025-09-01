@@ -17,12 +17,16 @@ class Constants:
         "Paga",
         "Rimborsi",
         "Altre entrate"
-    ] 
+    ]
     COLUMNS = [                              # <--- To config.json
         "Date",
         "Category",
         "Amount"
     ]
+    SIMULATION_COLUMNS_CONSTANTS = {
+        "Paga" : {"Day": 15, "Amount": 1900},
+        "Affitto" : {"Day": 5, "Amount": -521}
+    }
     
     MONTHS = {
         month[:3] : i for i, month in enumerate(calendar.month_name) if month
@@ -44,4 +48,7 @@ class Constants:
         if not os.path.join(os.path.join(self.PATH_DATA, self.INIT_VALUE_FILE)):
             raise OSError(f"File: {self.INIT_VALUE_FILE} not found but required.")
         self.PATH_INIT_VALUE = os.path.join(self.PATH_DATA, self.INIT_VALUE_FILE)
-        
+    #end
+#end
+
+

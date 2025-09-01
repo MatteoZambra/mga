@@ -7,17 +7,20 @@ if __name__ == "__main__":
 
     # Instantiate configuration
     cfg = config.Constants()
+    print(f"File: {cfg.PATH_RAW_DATA}")
     
     # Instantiate operations class
-    if False:
+    if True:
         operations = Operations(cfg.PATH_RAW_DATA, cfg)
         operations.setup()
         operations.print_expected_delta()
     
     # Instantiate timeseries class
-    if False:
+    if True:
         timeseries = Timeseries(cfg.PATH_RAW_DATA, cfg)
-        inout_sheet = timeseries.setup()
+        timeseries.setup()
+        true_inout = timeseries.get_raw_data()
+        timeseries.sumup_printout(save_file = True)
         
         # Plot
         Plots.plot_trend(timeseries)
@@ -26,3 +29,27 @@ if __name__ == "__main__":
     if True:
         spending_patterns = SpendingPatterns(cfg.PATH_RAW_DATA, cfg)
         spending_patterns.fit()
+        simulated_inout = (
+            spending_patterns
+            .simulate_yearly_expenses(
+                rules = cfg.SIMULATION_COLUMNS_CONSTANTS,
+                save = True
+            )
+        )
+        
+        # Let's see if there is statistical match
+        from copy import deepcopy
+        import os
+        
+        cfg_ = deepcopy(cfg)
+        cfg_.DATA_FORMAT = "xlsx"
+        cfg_.PATH_RAW_DATA = os.path.join(
+            cfg.PATH_DATA,
+            f"Simulated_synthesis_{cfg.YEAR}.xlsx"
+        )
+        cfg_.HEADER = 0
+        
+        timeseries_simulated = Timeseries(cfg_.PATH_RAW_DATA, cfg_)
+        timeseries_simulated.setup()
+        
+        Plots.plot_trend(timeseries_simulated)
