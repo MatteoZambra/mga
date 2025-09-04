@@ -14,7 +14,17 @@ if __name__ == "__main__":
         operations.setup()
         operations.print_expected_delta()
         
-        Plots.plot_expense_items(operations)
+        fig_incomes, fig_expenses = Plots.plot_expense_items(operations)
+        fig_incomes.write_html(
+            "./data/2024/operations_incomes.html",
+            include_plotlyjs = 'cdn',
+            full_html = True
+        )
+        fig_expenses.write_html(
+            "./data/2024/operations_expenses.html",
+            include_plotlyjs = 'cdn',
+            full_html = True
+        )
     
     # Instantiate timeseries class
     if True:
@@ -24,7 +34,12 @@ if __name__ == "__main__":
         timeseries.sumup_printout(save_file = True)
         
         # Plot
-        Plots.plot_trend(timeseries)
+        fig_timeseries = Plots.plot_trend(timeseries)
+        fig_timeseries.write_html(
+            "./data/2024/timeseries.html",
+            include_plotlyjs = 'cdn',
+            full_html = True
+        )
     
     # Instantiate class to extrapolate spending patterns
     if False:
