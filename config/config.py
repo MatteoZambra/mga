@@ -7,16 +7,14 @@ from dataclasses import dataclass
 
 @dataclass
 class Constants:
-    YEAR = 2023                              # <--- To config.json
-    TASK = "Movements"                       # <--- To config.json
-    DATA_FORMAT = "xls"                      # <--- To config.json
+    YEAR = 2024                              # <--- To config.json
+    DATA_FORMAT = "csv"                      # <--- To config.json
     CSV_ENCODING = "latin-1"                 # <--- To config.json
-    HEADER = 2                               # <--- To config.json
-    DATE_SEPARATION = "-"                    # <--- To config.json
+    HEADER = 0                               # <--- To config.json
+    DATE_SEPARATION = "/"                    # <--- To config.json
     CATEGORIES_INCOME = [                    # <--- To config.json
-        "Paga",
-        "Rimborsi",
-        "Altre entrate"
+        "Salary",
+        "Other incomes"
     ]
     COLUMNS = [                              # <--- To config.json
         "Date",
@@ -24,8 +22,8 @@ class Constants:
         "Amount"
     ]
     SIMULATION_COLUMNS_CONSTANTS = {
-        "Paga" : {"Day": 15, "Amount": 1900},
-        "Affitto" : {"Day": 5, "Amount": -521}
+        "Salary" : {"Day": 15, "Amount": 2000},
+        "Rent" : {"Day": 5, "Amount": -600}
     }
     
     MONTHS = {
@@ -35,7 +33,7 @@ class Constants:
     def __post_init__(self):
         self.YEAR_DAYS = pd.Timestamp(self.YEAR, 12, 31).dayofyear
         self.PATH_DATA = os.path.join(os.getcwd(), "data", str(self.YEAR))
-        self.RAW_DATA_FILE = f"Synthesis_{str(self.YEAR)}_cat.{self.DATA_FORMAT}"
+        self.RAW_DATA_FILE = f"Synthesis_{str(self.YEAR)}_cat_mockdata.{self.DATA_FORMAT}"
         self.INIT_VALUE_FILE = "dispo_init.csv"
 
         if not os.path.exists(self.PATH_DATA):

@@ -7,13 +7,14 @@ if __name__ == "__main__":
 
     # Instantiate configuration
     cfg = config.Constants()
-    print(f"File: {cfg.PATH_RAW_DATA}")
     
     # Instantiate operations class
     if True:
         operations = Operations(cfg.PATH_RAW_DATA, cfg)
         operations.setup()
         operations.print_expected_delta()
+        
+        Plots.plot_expense_items(operations)
     
     # Instantiate timeseries class
     if True:
@@ -26,14 +27,14 @@ if __name__ == "__main__":
         Plots.plot_trend(timeseries)
     
     # Instantiate class to extrapolate spending patterns
-    if True:
+    if False:
         spending_patterns = SpendingPatterns(cfg.PATH_RAW_DATA, cfg)
         spending_patterns.fit()
         simulated_inout = (
             spending_patterns
             .simulate_yearly_expenses(
                 rules = cfg.SIMULATION_COLUMNS_CONSTANTS,
-                save = True
+                save = False
             )
         )
         
@@ -52,4 +53,4 @@ if __name__ == "__main__":
         timeseries_simulated = Timeseries(cfg_.PATH_RAW_DATA, cfg_)
         timeseries_simulated.setup()
         
-        Plots.plot_trend(timeseries_simulated)
+        Plots.plot_trend(timeseries_simulated, "./data/2023/timeseries_simulated.png")
