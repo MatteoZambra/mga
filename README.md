@@ -2,11 +2,12 @@
 
 This repo contains the source code I originally wrote to monitor bank account input and output fluxes.
 
-Binder notebook: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/MatteoZambra/mga/HEAD?urlpath=%2Fdoc%2Ftree%2Fdemo.ipynb)
-
 Main functionalities:
 - Aggregate expense items to visualize the items' volume. Monthly and yearly averages
 - Obtain a spreadsheet with cumulative and istantaneous input and output fluxes.
+
+Aggregated expense items visualization leads to the following infographics
+![Expenses Volumes](./figures/operations_expenses.html)
 
 These functionalities allow to
 - Estimate the volume of lifestyle cost
