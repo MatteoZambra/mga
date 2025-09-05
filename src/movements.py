@@ -1,36 +1,12 @@
 
 import numpy as np
 import pandas as pd
-from functools import partial
 from dataclasses import dataclass
 import os
 
+from src.simutools import SimulationTools
+from src.utils import DataUtils
 
-class DataUtils:
-    @staticmethod
-    def get_reader(data_format, csv_encoding = None, header = None):
-        if data_format in ["xls", "xlsx"]:
-            reader = partial(
-                pd.read_excel,
-                header = header
-            )
-        elif data_format == "csv":
-            reader = partial(
-                pd.read_csv,
-                encoding = csv_encoding,
-                header = header
-            )
-        return reader
-    #end
-    
-    def get_formatted_date(date_list, format_list, separator):
-        datetime_date = pd.to_datetime(
-            separator.join(date_list),
-            format = separator.join(format_list)
-        )
-        return datetime_date
-    #end
-#end
 
 @dataclass
 class CapitalLinearModelParams:
@@ -84,8 +60,9 @@ class Movements:
                     pd.to_datetime(
                         x["Date"].values,
                         format = self.config.DATE_SEPARATION.join(
-                            ("%d","%m", "%Y")
-                        )#.replace(" ", "")
+                            # ("%d", "%m", "%Y")
+                            tuple(self.config.DATE_FORMAT)
+                        )
                     )
                 )
             )
@@ -431,7 +408,6 @@ class Timeseries(Movements):
         If necessary, evaluate the average stock and the available
         stock at the end of the year, ie on Dec 31st.
         """
-        
         self.average_stock = self.inout_sheet["Available"].mean()
         self.stock_at_Dec31st = self.inout_sheet.loc[self.dec_31st, "Available"]
     #end
@@ -500,7 +476,6 @@ class SpendingPatterns(Movements):
                 columns = "Category",
                 index = "Date"
             )
-            # .set_index("Date")
             .resample("1D")
             .mean()
         )
@@ -559,121 +534,51 @@ class SpendingPatterns(Movements):
         expenses_lags = self.interarrival_times
         expenses_volumes = self.expenses
         
-        # Initialize mock data structure
-        simulated_expenses = {}
-        
-        # Simulate
-        for col, lags in expenses_lags.items():
-            if lags.empty:
-                continue
-            
-            if col in rules.keys():
-                simulated_expenses[col] = pd.Series(
-                    data = np.array(
-                        [rules[col]["Amount"]] * len(self.config.MONTHS)
-                    ),
-                    index = [
-                        DataUtils.get_formatted_date(
-                            date_list = [
-                                f"{rules[col]['Day']}",
-                                f"{month:02d}",
-                                str(self.config.YEAR)],
-                            format_list = ["%d", "%m", "%Y"],
-                            separator = self.config.DATE_SEPARATION
-                        )
-                        for month in self.config.MONTHS.values()
-                    ]
-                )
-                continue
-            
-            # Simulate as many expense occurrences as the observed ones
-            # with a dispersion of 10, if the observed expenses are more
-            # than 10 in the original observed data. Otherwise, simply
-            # the number of real occurrences of that item
-            n_expenses = len(expenses_volumes[col].dropna())
-            if n_expenses > 10:
-                n_expenses = n_expenses + np.random.randint(0, 50, size = 1)
-                n_expenses = np.maximum(0, n_expenses)
-            
-            # Statistically likely sequence of occurrences for this expense item
-            sampled_lags = np.random.choice(
-                lags, size = n_expenses, replace = True
-            )
-            
-            # Set the first date and sample dates according to 
-            # the previously evaluated statistics
-            sampled_dates = [
-                pd.Timestamp(np.random.choice(
-                    pd.date_range(
-                        start = self.jan_1st,
-                        end = expenses_lags[col].index[0],
-                        freq = "D"
-                    )
-                ))
-            ]
-            for lag in sampled_lags:
-                date_next = sampled_dates[-1] + pd.Timedelta(days = int(lag))
-                if date_next.year != self.config.YEAR:
-                    continue
-                
-                sampled_dates.append(
-                    sampled_dates[-1] + pd.Timedelta(days = int(lag))
-                )
-            #end
-            
-            # Simulate expense items
-            simulated_expenses[col] = pd.Series(
-                np.random.choice(
-                    expenses_volumes[col].dropna(),
-                    size = len(sampled_dates),
-                    replace = True
-                ),
-                index = sampled_dates,
-                name = col
-            )
-        #end
-        
-        # Obtain the dataframe
-        simulated_expenses = pd.concat(simulated_expenses, axis = 1)
-        
-        # Explode columns
-        simulated_inout = (
-            simulated_expenses
-            
-            # Redefine the date as column
-            .reset_index()
-            .rename(columns = {"index": "Date"})
-            
-            # Undo the pivoting operation, drop nans
-            .melt(
-                id_vars = "Date",
-                value_name = "Amount",
-                var_name = "Category",
-                
-                # Note: the following operation needs to refer to the
-                # variable as it was before the operations pipe, as
-                # we need all and only the columns of that version
-                value_vars = simulated_expenses.columns,
-            )
-            .dropna()
-            .sort_values(by = "Date")
+        # Get the simulated expense items
+        simulated_inout = SimulationTools.simulate_expense_voice(
+            expenses_volumes,
+            expenses_lags,
+            rules,
+            self.config,
+            self.jan_1st
         )
         
         # If the case, save the sheet
         if save:
-            if self.config.DATA_FORMAT == "xls":
-                data_format = "xlsx"
-            else:
-                data_format = self.config.DATA_FORMAT
-            
-            simulated_inout.to_excel(
+            self.save_data(
+                simulated_inout,
+                f"Simulated_synthesis_{self.config.YEAR}"
+            )
+        
+        # Return to the main script
+        return simulated_inout
+    #end
+    
+    def save_data(self, data, filename):
+        # If the input format is `xls`, we save it as
+        # and Excel-readable spreadsheet. Otherwise (e.g. `csv`)
+        # we're happy with it and retain the original format       
+        if self.config.DATA_FORMAT == "xls":
+            data_format = "xlsx"
+            data.to_excel(
                 os.path.join(
                     self.config.PATH_DATA,
-                    f"Simulated_synthesis_{self.config.YEAR}.{data_format}"
+                    f"{filename}.xlsx"
                 ),
                 index = False
             )
-        
-        return simulated_inout
+        elif self.config.DATA_FORMAT == "csv":
+            data_format = self.config.DATA_FORMAT
+            data.to_csv(
+                os.path.join(
+                    self.config.PATH_DATA,
+                    f"{filename}.{data_format}"
+                ),
+                index = False
+            )
+        else:
+            raise NotImplementedError(f"Data type `{self.config.DATA_FORMAT}` "
+                                      "NOT supported! Choose [xlsx | csv]")
+        #end
     #end
 #end

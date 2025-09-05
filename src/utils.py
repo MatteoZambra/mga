@@ -1,15 +1,48 @@
 
+from functools import partial
+
 import numpy as np
+import pandas as pd
+
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import plotly.colors as pc
-import src.movements as mv
 
+
+class DataUtils:
+    @staticmethod
+    def get_reader(data_format, csv_encoding = None, header = None):
+        if data_format in ["xls", "xlsx"]:
+            reader = partial(
+                pd.read_excel,
+                header = header
+            )
+        elif data_format == "csv":
+            reader = partial(
+                pd.read_csv,
+                encoding = csv_encoding,
+                header = header
+            )
+        else:
+            raise NotImplementedError(f"Data type `{data_format}` NOT supported!")
+        #end
+        
+        return reader
+    #end
+    
+    def get_formatted_date(date_list, format_list, separator):
+        datetime_date = pd.to_datetime(
+            separator.join(date_list),
+            format = separator.join(format_list)
+        )
+        return datetime_date
+    #end
+#end
 
 class Plots:
     @staticmethod
     def plot_trend(
-            timeseries: mv.Timeseries,
+            timeseries,
             backend,
             save_path = None
         ):
@@ -149,7 +182,6 @@ class Plots:
             plotter_fnc = _make_pie_plot_plotly
         
         if backend == "matplotlib":
-            
             def _make_pie_plot_matplotlib(_labels, _sizes, facecolor, title = None):
                 # Define the plot
                 fig, ax = plt.subplots(figsize = (7.5, 5.5))
@@ -183,9 +215,9 @@ class Plots:
                 return fig
             #end
             
+            # Assing plotter function
             plotter_fnc = _make_pie_plot_matplotlib
         #end
-        
         
         # Make pie chart for the inputs
         fig_incomes = plotter_fnc(

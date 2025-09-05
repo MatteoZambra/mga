@@ -11,6 +11,7 @@ class Constants:
     DATA_FORMAT = "csv"                      # <--- To config.json
     CSV_ENCODING = "latin-1"                 # <--- To config.json
     HEADER = 0                               # <--- To config.json
+    DATE_FORMAT = ["%d", "%m", "%Y"]         # <--- To config.json
     DATE_SEPARATION = "/"                    # <--- To config.json
     CATEGORIES_INCOME = [                    # <--- To config.json
         "Salary",
@@ -46,6 +47,10 @@ class Constants:
         if not os.path.join(os.path.join(self.PATH_DATA, self.INIT_VALUE_FILE)):
             raise OSError(f"File: {self.INIT_VALUE_FILE} not found but required.")
         self.PATH_INIT_VALUE = os.path.join(self.PATH_DATA, self.INIT_VALUE_FILE)
+    #end
+    
+    def set_property(self, attr_name, attr_value):
+        setattr(self, attr_name, attr_value)
     #end
 #end
 
