@@ -4,8 +4,8 @@ import pandas as pd
 from dataclasses import dataclass
 import os
 
-from src.simutools import SimulationTools
 from src.utils import DataUtils
+from src.simutools import SimulationTools
 
 
 @dataclass
@@ -443,7 +443,25 @@ class Timeseries(Movements):
                 index = False
             )
         
-        print(stats)
+        print("\n", stats)
+    #end
+#end
+
+class TimeseriesProjection(Timeseries):
+    def __init__(self, path_data, config):
+        super().__init__(path_data, config)
+    #end
+    
+    def define_year_extremes(self):
+        # Add Jan 1st and Dec 31st, if missing
+        self.jan_1st = DataUtils.get_formatted_date(
+            date_list = ["01", "01", str(self.config.YEAR)],
+            format_list = ["%d", "%m", "%Y"],
+            separator = self.config.DATE_SEPARATION
+        )
+        self.dec_31st = self.jan_1st + pd.Timedelta(
+            self.config.SIMULATED_YEARS * 365 - 1, "d"
+        )
     #end
 #end
 
