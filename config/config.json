@@ -1,14 +1,14 @@
 {
-    "YEAR": 2023,
-    "DATA_FORMAT": "xls",
+    "YEAR": 2024,
+    "DATA_FORMAT": "csv",
     "CSV_ENCODING": "latin-1",
-    "HEADER": 2,
-    "DATE_FORMAT": ["%d", "%m", "%Y"],
+    "HEADER": 0,
+    "DATE_FORMAT": ["%Y", "%m", "%d"],
     "DATE_SEPARATION": "-",
     "CATEGORIES_INCOME": [
-        "Paga",
-        "Altre entrate",
-        "Rimborsi"
+        "Salary",
+        "Other incomes",
+        "Reimbursement"
     ],
     "COLUMNS": [
         "Date",
@@ -16,7 +16,7 @@
         "Amount"
     ],
     "SIMULATION_COLUMNS_CONSTANTS": {
-        "Paga": {"Day": 15, "Amount": 1880},
+        "Paga": {"Day": 15, "Amount": 2000},
         "Affitto": {"Day": 5, "Amount": -600}
     },
     "SIMULATED_YEARS": 2

@@ -28,15 +28,14 @@ class Movements:
     expenses. This class contains the attributes common to the two 
     derived classes. 
     """
-    def __init__(self, path_data, config):
-        self.path_data = path_data
+    def __init__(self, config):
         self.config = config
         
         # Save Jan 1st and Dec 31st, may be handy
         self.define_year_extremes()
     #end
 
-    def get_raw_data(self):
+    def get_raw_data(self, path_data):
         """
         Read the raw data and preprocess the table.
         """
@@ -49,7 +48,7 @@ class Movements:
                 data_format = self.config.DATA_FORMAT,
                 csv_encoding = self.config.CSV_ENCODING,
                 header = self.config.HEADER
-            ) (self.path_data)
+            ) (path_data)
             
             # --- Select the columns to keep
             [self.config.COLUMNS]
@@ -92,17 +91,16 @@ class Movements:
 
 
 class Operations(Movements):
-    def __init__(
-            self,
-            path_data,
-            config
-        ):
-        super().__init__(path_data, config)
+    def __init__(self, config):
+        super().__init__(config)
     #end
-
-    def setup(self):
+    
+    def setup(self, data = None):
         # Get raw data
-        ops_sheet = self.get_raw_data()
+        if isinstance(data, pd.DataFrame):
+            ops_sheet = data.copy()
+        else:
+            ops_sheet = self.get_raw_data(self.config.PATH_RAW_DATA)
         
         # For each month, aggregate the expenses
         # associated to each expense item
@@ -227,18 +225,17 @@ class Operations(Movements):
 
 
 class Timeseries(Movements):
-    def __init__(
-            self,
-            path_data,
-            config
-        ):
-        super().__init__(path_data, config)
+    def __init__(self, config):
+        super().__init__(config)
         self.stock_init = np.loadtxt(self.config.PATH_INIT_VALUE)
     #end
     
-    def setup(self):
+    def setup(self, data = None, path_data = None):
         # Get raw data
-        ops_sheet = self.get_raw_data()
+        if isinstance(data, pd.DataFrame):
+            ops_sheet = data.copy()
+        else:
+            ops_sheet = self.get_raw_data(self.config.PATH_RAW_DATA)
         
         # Prepare the input-output movements sheet,
         # with chronological order
@@ -246,10 +243,7 @@ class Timeseries(Movements):
         self.inout_sheet = inout_sheet
         
         # Aggregate monthly operations
-        monthly_deltas = self.get_monthly_operations_aggregates(inout_sheet)
-        
-        # Obtain capital evolution (linear model) parameters
-        self.fit_regression_coefficients(monthly_deltas)
+        self.monthly_deltas = self.get_monthly_operations_aggregates(inout_sheet)
     #end
     
     def create_timeseries_worksheet(self, ops_sheet):
@@ -369,7 +363,7 @@ class Timeseries(Movements):
         return monthly_deltas
     #end
     
-    def fit_regression_coefficients(self, monthly_deltas):
+    def fit_trendline_coefficients(self, monthly_deltas = None):
         """
         Estimation: average the monthly delta and divide for the 
         number of month days in this year. Gives an estimate of 
@@ -377,6 +371,13 @@ class Timeseries(Movements):
         increase in capital, given the overall lifestyle cost, income ...
         The intercept is simply the initial stock value.
         """
+        
+        # If not provided, get the data saved as class attribute
+        if not monthly_deltas:
+            try:
+                monthly_deltas = self.monthly_deltas
+            except:
+                AttributeError("`monthly_deltas` likely not saved as class attribute")
         
         # Slope
         estimated_slope = np.divide(
@@ -466,13 +467,17 @@ class TimeseriesProjection(Timeseries):
 #end
 
 class SpendingPatterns(Movements):
-    def __init__(self, path_data, config):
-        super().__init__(path_data, config)
+    def __init__(self, config):
+        super().__init__(config)
     #end
     
-    def fit(self):
-        raw_data = self.get_raw_data()
-        self.extrapolate_expenses_statistics(raw_data)
+    def fit(self, data = None):
+        if isinstance(data, pd.DataFrame):
+            ops_sheet = data.copy()
+        else:
+            ops_sheet = self.get_raw_data(self.config.PATH_RAW_DATA)
+        
+        self.extrapolate_expenses_statistics(ops_sheet)
     #end
     
     def extrapolate_expenses_statistics(self, ops_sheet):

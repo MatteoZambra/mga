@@ -10,16 +10,17 @@ class Plots:
     @staticmethod
     def plot_trend(
             timeseries,
-            backend,
+            backend = "matplotlib",
             plot_trend_line = True,
             save_path = None
         ):
         
         inout_sheet = timeseries.inout_sheet
         tspan = inout_sheet.index
-        lspan = np.linspace(0, len(tspan), len(tspan))
-        real_slope, intercept = timeseries.estimated_lm_params()
-        trend_line = lspan * real_slope + intercept
+        if plot_trend_line:
+            lspan = np.linspace(0, len(tspan), len(tspan))
+            real_slope, intercept = timeseries.estimated_lm_params()
+            trend_line = lspan * real_slope + intercept
         
         if backend == "matplotlib":
         
@@ -104,7 +105,7 @@ class Plots:
     @staticmethod
     def plot_expense_items(
             operations,
-            backend,
+            backend = "matplotlib",
             save_path = None
         ):
         
