@@ -19,5 +19,6 @@
         "Paga": {"Day": 15, "Amount": 2000},
         "Affitto": {"Day": 5, "Amount": -600}
     },
-    "SIMULATED_YEARS": 2
+    "SIMULATED_YEARS": 2,
+    "SIMULATION_RUNS": 10
 }

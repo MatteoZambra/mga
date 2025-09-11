@@ -21,6 +21,7 @@ class UserDefinedConstants:
     COLUMNS: List[str]
     SIMULATION_COLUMNS_CONSTANTS: Dict[str, Dict[str, int]]
     SIMULATED_YEARS: int
+    SIMULATION_RUNS: int
 #end
 
 @dataclass
@@ -42,6 +43,7 @@ class Constants:
         self.COLUMNS = cfg_file.COLUMNS
         self.SIMULATION_COLUMNS_CONSTANTS = cfg_file.SIMULATION_COLUMNS_CONSTANTS
         self.SIMULATED_YEARS = cfg_file.SIMULATED_YEARS
+        self.SIMULATION_RUNS = cfg_file.SIMULATION_RUNS
         
         self.MONTHS = {
             month[:3] : i for i, month in enumerate(calendar.month_name) if month

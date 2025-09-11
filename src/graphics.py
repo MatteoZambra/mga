@@ -103,6 +103,38 @@ class Plots:
     #end
     
     @staticmethod
+    def plot_simulation_runs(
+            simulated_inouts,
+            trendline_params = None,
+            plot_trend_line = False
+        ):
+        
+        fig, ax = plt.subplots(figsize = (15,5))
+        for inout in simulated_inouts:
+            tspan = inout.index
+            if plot_trend_line:
+                lspan = np.linspace(0, len(tspan), len(tspan))
+                real_slope, intercept = trendline_params()
+                trend_line = lspan * real_slope + intercept
+            ax.plot(tspan, inout["CumulativeIn"],
+                    color = 'g', lw = 2, alpha = 0.35)
+            ax.plot(tspan, inout["CumulativeOut"],
+                    color = 'r', lw = 2, alpha = 0.35)
+            ax.plot(tspan, inout["Available"],
+                    color = 'k', lw = 2, alpha = 0.35)
+            if plot_trend_line:
+                ax.plot(tspan, trend_line,
+                        color = 'k', lw = 2, ls = '--', alpha = 0.75,
+                        label = f'Fitted Trend (empirical), slope = {real_slope:.2f}')
+            ax.set_xlabel('Time', fontsize = 14, labelpad = 15)
+            ax.set_ylabel('Amount [EUR]', fontsize = 14, labelpad = 15)
+            ax.grid(axis = 'both', lw = 0.5)
+        
+        if trendline_params is not None and plot_trend_line:
+            ax.plot(tspan, trend_line, c = "k", lw = 2, alpha = 0.85, ls = "--")
+        # ax.legend()
+    
+    @staticmethod
     def plot_expense_items(
             operations,
             backend = "matplotlib",

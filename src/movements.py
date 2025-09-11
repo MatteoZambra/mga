@@ -1,8 +1,10 @@
 
-import numpy as np
-import pandas as pd
 from dataclasses import dataclass
 import os
+
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
 
 from src.utils import DataUtils
 from src.simutools import SimulationTools
@@ -448,23 +450,6 @@ class Timeseries(Movements):
     #end
 #end
 
-class TimeseriesProjection(Timeseries):
-    def __init__(self, path_data, config):
-        super().__init__(path_data, config)
-    #end
-    
-    def define_year_extremes(self):
-        # Add Jan 1st and Dec 31st, if missing
-        self.jan_1st = DataUtils.get_formatted_date(
-            date_list = ["01", "01", str(self.config.YEAR)],
-            format_list = ["%d", "%m", "%Y"],
-            separator = self.config.DATE_SEPARATION
-        )
-        self.dec_31st = self.jan_1st + pd.Timedelta(
-            self.config.SIMULATED_YEARS * 365 - 1, "d"
-        )
-    #end
-#end
 
 class SpendingPatterns(Movements):
     def __init__(self, config):
@@ -558,50 +543,18 @@ class SpendingPatterns(Movements):
         expenses_volumes = self.expenses
         
         # Get the simulated expense items
-        simulated_inout = SimulationTools.simulate_expense_voice(
-            expenses_volumes,
-            expenses_lags,
-            rules,
-            self.config,
-            self.jan_1st
-        )
-        
-        # If the case, save the sheet
-        if save:
-            self.save_data(
-                simulated_inout,
-                f"Simulated_synthesis_{self.config.YEAR}"
+        simulated_inouts = []
+        for run in tqdm(range(self.config.SIMULATION_RUNS)):
+            simulated_inout = SimulationTools.simulate_expense_voice(
+                expenses_volumes,
+                expenses_lags,
+                rules,
+                self.config,
+                self.jan_1st
             )
+            simulated_inouts.append(simulated_inout)
         
         # Return to the main script
-        return simulated_inout
-    #end
-    
-    def save_data(self, data, filename):
-        # If the input format is `xls`, we save it as
-        # and Excel-readable spreadsheet. Otherwise (e.g. `csv`)
-        # we're happy with it and retain the original format       
-        if self.config.DATA_FORMAT == "xls":
-            data_format = "xlsx"
-            data.to_excel(
-                os.path.join(
-                    self.config.PATH_DATA,
-                    f"{filename}.xlsx"
-                ),
-                index = False
-            )
-        elif self.config.DATA_FORMAT == "csv":
-            data_format = self.config.DATA_FORMAT
-            data.to_csv(
-                os.path.join(
-                    self.config.PATH_DATA,
-                    f"{filename}.{data_format}"
-                ),
-                index = False
-            )
-        else:
-            raise NotImplementedError(f"Data type `{self.config.DATA_FORMAT}` "
-                                      "NOT supported! Choose [xlsx | csv]")
-        #end
+        return simulated_inouts
     #end
 #end

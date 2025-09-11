@@ -4,7 +4,6 @@ from src.movements import (
     Movements,
     Operations,
     Timeseries,
-    TimeseriesProjection,
     SpendingPatterns
 )
 from src.graphics import Plots
@@ -26,7 +25,7 @@ if __name__ == "__main__":
         ## Print the expected monthly delta
         operations.print_expected_delta()
         
-        ## Plot
+        ## Plot the income/expense voices
         _,_ = Plots.plot_expense_items(operations)
         
         # --- Time series reconstruction ---
@@ -40,26 +39,31 @@ if __name__ == "__main__":
         ## Print yearly statistics
         timeseries.sumup_printout(save_file = True)
         
-        ## Plot
+        ## Plot the timeseries reconstruction
         _ = Plots.plot_trend(timeseries)
     
     
-    # Instantiate class to extrapolate spending patterns
+    # Forecasting
     if True:
-        # Extrapolate the spending patterns of the selected year
+        # --- Extrapolate the spending patterns of the selected year
         spending_patterns = SpendingPatterns(cfg)
         spending_patterns.fit()
         
-        # Perform and ahead-in-time simulation
+        ## Perform and ahead-in-time simulation
         simulated_inout = spending_patterns.simulate_yearly_expenses(
                 rules = cfg.SIMULATION_COLUMNS_CONSTANTS,
         )
-                
-        # # And make the future projection
-        timeseries_simulated = Timeseries(cfg)
-        timeseries_simulated.setup(data = simulated_inout)
         
-        timeseries_simulated.fit_trendline_coefficients()
-        timeseries_simulated.sumup_printout(save_file = False)
+        ## Instantiate Timeseries classes to host source simulated data
+        simulated_inout_timeseries = []
+        for inout in simulated_inout:
+            _timeseries = Timeseries(cfg)
+            _timeseries.setup(inout)
+            simulated_inout_timeseries.append(_timeseries.inout_sheet)
         
-        _ = Plots.plot_trend(timeseries_simulated, plot_trend_line = False)
+        # Plot the simulation runs
+        _ = Plots.plot_simulation_runs(
+            simulated_inout_timeseries,
+            trendline_params = timeseries.estimated_lm_params,
+            plot_trend_line = True
+        )
