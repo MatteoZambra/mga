@@ -39,7 +39,7 @@ if __name__ == "__main__":
         )
     
     # Instantiate class to extrapolate spending patterns
-    if True:
+    if False:
         from copy import deepcopy
         import os
         
