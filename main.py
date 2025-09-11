@@ -61,7 +61,7 @@ if __name__ == "__main__":
             _timeseries.setup(inout)
             simulated_inout_timeseries.append(_timeseries.inout_sheet)
         
-        # Plot the simulation runs
+        ## Plot the simulation runs
         _ = Plots.plot_simulation_runs(
             simulated_inout_timeseries,
             trendline_params = timeseries.estimated_lm_params,
