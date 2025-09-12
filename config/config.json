@@ -24,5 +24,5 @@
         "Formation": {"Day": 9, "Month": 10, "Year": 2024, "Amount": -800}
     },
     "SIMULATED_YEARS": 2,
-    "SIMULATION_RUNS": 20
+    "SIMULATION_RUNS": 10
 }
