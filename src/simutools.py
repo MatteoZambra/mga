@@ -22,8 +22,8 @@ class SimulationTools:
             config.SIMULATED_YEARS * 365 - 1, "d"
         )
         dates_range = pd.date_range(day_simulation_start, time_horizon)
-        years = [year.item() for year in 
-                 pd.Series(dates_range).dt.year.unique()]
+        years_from_config = [year.item() for year in 
+                             pd.Series(dates_range).dt.year.unique()]
         
         # Simulate
         for col, lags in expenses_lags.items():
@@ -33,9 +33,38 @@ class SimulationTools:
             if col in rules.keys():
                 # Enforce the user-defined input/output rules
                 # E.g. Recurrent salary input, recurrent rent expense
+                
+                condition_recurrent_all_months = (
+                    "Day" in rules[col].keys() and
+                    not "Month" in rules[col].keys() and 
+                    not "Year" in rules[col].keys()
+                )
+                condition_recurrent_all_years = (
+                    "Day" in rules[col].keys() and 
+                    "Month" in rules[col].keys() and
+                    not "Year" in rules[col].keys()
+                )
+                condition_una_tantum = (
+                    "Day" in rules[col].keys() and 
+                    "Month" in rules[col].keys() and 
+                    "Year" in rules[col].keys()
+                )
+                
+                if condition_recurrent_all_months:
+                    years = years_from_config
+                    months = config.MONTHS.values()
+                
+                elif condition_recurrent_all_years:
+                    years = years_from_config
+                    months = [rules[col]["Month"]]
+                
+                elif condition_una_tantum:
+                    years = [rules[col]["Year"]]
+                    months = [rules[col]["Month"]]
+                
                 simulated_expenses[col] = pd.Series(
                     data = np.array(
-                        [rules[col]["Amount"]] * len(config.MONTHS) * len(years)
+                        [rules[col]["Amount"]] * len(months) * len(years)
                     ),
                     index = [
                         DataUtils.get_formatted_date(
@@ -46,7 +75,7 @@ class SimulationTools:
                             format_list = ["%d", "%m", "%Y"],
                             separator = config.DATE_SEPARATION
                         )
-                        for month in config.MONTHS.values()
+                        for month in months
                         for year in years
                     ]
                 )

@@ -16,8 +16,12 @@
         "Amount"
     ],
     "SIMULATION_COLUMNS_CONSTANTS": {
-        "Paga": {"Day": 15, "Amount": 2000},
-        "Affitto": {"Day": 5, "Amount": -600}
+        "Salary": {"Day": 15, "Amount": 2000},
+        "Rent": {"Day": 5, "Amount": -600},
+        "Subscription": {"Day": 20, "Amount": -10},
+        "Telephone": {"Day": 25, "Amount": -10},
+        "Taxes": {"Day": 15, "Month": 9, "Amount": -700},
+        "Formation": {"Day": 9, "Month": 10, "Year": 2024, "Amount": -800}
     },
     "SIMULATED_YEARS": 2,
     "SIMULATION_RUNS": 10

@@ -117,11 +117,11 @@ class Plots:
                 real_slope, intercept = trendline_params()
                 trend_line = lspan * real_slope + intercept
             ax.plot(tspan, inout["CumulativeIn"],
-                    color = 'g', lw = 2, alpha = 0.35)
+                    color = 'g', lw = 2, alpha = 0.5)
             ax.plot(tspan, inout["CumulativeOut"],
-                    color = 'r', lw = 2, alpha = 0.35)
+                    color = 'r', lw = 2, alpha = 0.5)
             ax.plot(tspan, inout["Available"],
-                    color = 'k', lw = 2, alpha = 0.35)
+                    color = 'k', lw = 2, alpha = 0.5)
             if plot_trend_line:
                 ax.plot(tspan, trend_line,
                         color = 'k', lw = 2, ls = '--', alpha = 0.75,
