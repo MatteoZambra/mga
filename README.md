@@ -6,9 +6,6 @@ Main functionalities:
 - Aggregate expense items to visualize the items' volume. Monthly and yearly averages
 - Obtain a spreadsheet with cumulative and istantaneous input and output fluxes.
 
-Aggregated expense items visualization leads to the following infographics
-![Expenses Volumes](./figures/operations_expenses.html)
-
 These functionalities allow to
 - Estimate the volume of lifestyle cost
 - Understand what are the items that are more costly
