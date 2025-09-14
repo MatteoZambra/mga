@@ -16,7 +16,7 @@ These functionalities allow to
 
 Useful to make predictions and to evaluate potential investments allocatable volumes.
 
-> **NOTE**: The results presented are based on **synthetic data**, simulated by Google Gemini.
+> **NOTE**: The results presented are based on **synthetic data**, simulated by Google Gemini. The numbers used are random. Nothing representative of any real account.
 
 ## Foundation
 The following evolutionary equation is assumed
