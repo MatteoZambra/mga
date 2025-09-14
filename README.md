@@ -49,12 +49,30 @@ git clone https://github.com/MatteoZambra/mga.git
 ```
 
 Basic requirements list:
-- `pandas`: Data manipulation
-    - `xlrd`, `openpyxl` engines required to interact with `xls`, `xlsx` spreadsheets
-- `numpy`: Numerical computation
-- `tqdm`: Progress bars
-- `matplotlib`: Data visualization
-- (Optional) `plotly`: Interactive visualization
+- `pandas` (2.3.1): Data manipulation
+    - `xlrd` (2.0.1), `openpyxl` (3.1.5) engines required to interact with `xls`, `xlsx` spreadsheets
+- `numpy` (2.3.1): Numerical computation
+- `tqdm` (4.67.1): Progress bars
+- `matplotlib` (3.10.5): Data visualization
+- (Optional) `plotly` (6.3.0): Interactive visualization
+
+Output of `conda env export --from-history --name mga > mga.yml`:
+
+```
+name: mga
+channels:
+  - defaults
+dependencies:
+  - spyder
+  - numpy
+  - pandas
+  - matplotlib
+  - xlrd
+  - openpyxl
+  - jupyterlab
+  - plotly
+  - tqdm
+```
 
 ### Data setup
 1. Create a `./data/` directory in the root directory
