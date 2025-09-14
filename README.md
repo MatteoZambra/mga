@@ -78,11 +78,14 @@ dependencies:
 1. Create a `./data/` directory in the root directory
 2. Create a directory for each one of the years to analyze. For example: `./data/2024/`
 3. In this directory, place a file named `Synthesis_<YEAR>_cat.*`. It may be `csv`, `xls`, `xlsx`
+4. Also in this directory, place a file named `dispo_init.csv`. This file should contain the initial stock value.
 
 The source data file format can be specified in the configuration file.
 
 ### Data format
 The expected data source file is expected to be formatted as follows
+
+#### Source spreadsheet
 
 | Date | Category | Amount |
 | ---- | -------- | ------ |
@@ -93,7 +96,16 @@ The expected data source file is expected to be formatted as follows
 
 > **IMPORTANT**: Expenses (outgoing fluxes) should have the *minus sign*. Incomes (incoming fluxes) are positive.
 
-The date format, e.g. `YYYY-mm-dd`, or `dd/mm/YYYY`, must be specified in the configuration file. Note that the *date separator* must also be specified. 
+The date format, e.g. `YYYY-mm-dd`, or `dd/mm/YYYY`, must be specified in the configuration file. Note that the *date separator* must also be specified.
+
+#### Initial stock file
+The `dispo_init.csv` file must only contain a floating-point number. For example
+
+```
+5000.0
+```
+
+No spaces, units needed.
 
 ### Configuration
 
