@@ -1,4 +1,5 @@
-# Money ‒ Get Away
+# MicroEconoPycs
+A tool to analyze domestic finances.
 
 This repo contains the source code I originally wrote to monitor bank account input and output fluxes.
 
@@ -15,7 +16,7 @@ These functionalities allow to
 
 Useful to make predictions and to evaluate potential investments allocatable volumes.
 
-> **NOTE**: The results presented are based on **synthetic data**, simulated by Gemini.
+> **NOTE**: The results presented are based on **synthetic data**, simulated by Google Gemini.
 
 ## Foundation
 The following evolutionary equation is assumed
