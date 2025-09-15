@@ -40,6 +40,12 @@ class Movements:
     def get_raw_data(self, path_data):
         """
         Read the raw data and preprocess the table.
+        
+        Parameters
+        ----------
+        
+        path_data : ``string``
+            Path of the raw source data to process.
         """
         raw_data = (
             # Operations concatenation
@@ -77,6 +83,11 @@ class Movements:
     #end
     
     def define_year_extremes(self):
+        """
+        Helper methods to retrieve the dates of January 1st and December 31st.
+        This is used to impose these date boundaries if not present in the 
+        source data.
+        """
         # Add Jan 1st and Dec 31st, if missing
         self.jan_1st = DataUtils.get_formatted_date(
             date_list = ["01", "01", str(self.config.YEAR)],
@@ -98,6 +109,34 @@ class Operations(Movements):
     #end
     
     def setup(self, data = None):
+        r"""
+        This function sets up the data for the operations analysis. 
+        
+        Actions performed:
+            1. Load data, if not given
+            2. Aggregate the operation categories on monthly bases
+               Prepare these categories as ``dictionary``
+            3. For each category, obtain the array of expense items
+            4. FRom the latter, compute the monthly and yearly means
+            5. Estimate the expected end-of-month delta, that is the 
+               approximation of the operator :math:`\Phi`, according to 
+               the expression
+               
+                   .. math::
+                       \mathbf{x}_{t+1} = \mathbf{x}_t + \Phi(\mathbf{x}_t)
+            
+            This recipe allows to visualize the volumes of the expense items
+            for each month. That is, it allows to estimate the lifestyle cost.
+            
+        **NOTE** that this estimation depends on the analyzed year.
+
+        Parameters
+        ----------
+        data : ``pandas.DataFrame``, optional
+            The source data file. Default is ``None``. If not given, the 
+            method used the class method ``get_raw_data`` to retrieve 
+            the input spreadsheet.
+        """
         # Get raw data
         if isinstance(data, pd.DataFrame):
             ops_sheet = data.copy()
@@ -124,6 +163,9 @@ class Operations(Movements):
     #end
     
     def print_expected_delta(self):
+        r"""
+        Print the estimation of the delta :math:`\Phi`.
+        """
         try:
             print(f"Expected Delta = {self.expected_delta:.2f} EUR / Month")
         except AttributeError:
@@ -136,7 +178,20 @@ class Operations(Movements):
     
     def get_monthly_aggregated_categories_expanses(self, ops_sheet):
         """
-        For all the months, aggregate (sum) the expense item
+        For all the months, aggregate (sum) the expense item.
+        
+        Parameters
+        ----------
+        
+        ops_sheet : ``pandas.DataFrame``
+            The operations spreadsheet. This is the raw data file.
+        
+        Returns
+        -------
+        
+        ops_dict : ``dictionary`` of ``pandas.Series``
+            The overall operations for each expense item. Sorted
+            chronologically but not spaced according to the daily grid.
         """
         ops_dict = {
             month : (
@@ -153,7 +208,22 @@ class Operations(Movements):
     def get_categories_expanses_monthly(self, ops_dict, categories):
         """
         Get the yearly view. For each expanse items category, get the
-        12 values, each for each month
+        12 values, each for each month.
+        
+        Parameters
+        ----------
+        
+        ops_dict : ``dictionary`` of ``pandas.Series``
+            Dictionary with the aggregated expense items for each category.
+        categories: ``list``
+            All the categories found in the raw data file.
+        
+        Returns
+        -------
+        
+        expense_items : ``dictionary`` of ``numpy.ndarray``
+            For each category, the expense items for each month. So the array
+            has as many entries as the months, that is 12.
         """
         expense_items = {
             category : np.zeros(len(self.config.MONTHS.keys()))
@@ -186,7 +256,21 @@ class Operations(Movements):
         Given the dictionary of expense items throught the year, we
         may calculate the averages on both months and the year.
         This allows us to evaluate the lifestyle cost and what categories
-        of expenses cost most on the overall input/output flow
+        of expenses cost most on the overall input/output flow.
+        
+        Parameters
+        ----------
+        
+        expense_items : ``dictionary`` of ``numpy.ndarray``
+            It is the output of the ``get_categories_expanses_monthly`` method.
+        
+        Returns
+        -------
+        
+        month_means : ``dictionary`` of ``float``
+            The monthly means of each category of expense items.
+        year_means : ``dictionary`` of ``float``
+            The yearly means of same same categories.
         """
         month_means = {
             category : np.nanmean(expense_items[category])
@@ -209,6 +293,18 @@ class Operations(Movements):
         yearly means. The yearly means are intended to be the year-average
         of the monthly average items for each category. In other words, this
         method returns the expected capital variation.
+        
+        Parameters
+        ----------
+        
+        year_means : ``dictionary`` of ``float``
+            The second output of the ``get_monthly_yearly_means`` method.
+        
+        Returns
+        -------
+        
+        growth_slope : ``float``
+            The estimated :math:`\Phi`, that is the end-of-month delta.
         """
         year_means_expenses = year_means.copy()
         
@@ -232,7 +328,25 @@ class Timeseries(Movements):
         self.stock_init = np.loadtxt(self.config.PATH_INIT_VALUE)
     #end
     
-    def setup(self, data = None, path_data = None):
+    def setup(self, data = None):
+        """
+        Set up the data for the timeseries inspection.
+        
+        The actions are the following:
+            1. Get data, if not provided as argument
+            2. Rearrange the source data in chronological, daily-resoluted way 
+               If necessary, aggregating the input/output fluxes. Note: inputs
+               are all aggregated, outputs are all aggregated, regardless of
+               the category associated to each movement
+            3. Obtain the net differences between each month
+        
+        Parameters
+        ----------
+        
+        data : ``pandas.DataFrame``, optional
+            The raw source data spreadsheet. Default is ``None``. If not 
+            given, the data is fetched from the source directory.
+        """
         # Get raw data
         if isinstance(data, pd.DataFrame):
             ops_sheet = data.copy()
@@ -270,17 +384,48 @@ class Timeseries(Movements):
         as the days in the year, and the aforementioned columns. This helps 
         in evaluating the average spending volume (aggregated) for each month
         and to modellize the capital evolution.
+        
+        Parameters
+        ----------
+        
+        ops_sheet : ``pandas.DataFrame``
+            The source data spreadsheet.
+        
+        Returns
+        -------
+        
+        ops_sheet : ``pandas.DataFrame``
+            The data, transformed in chronological daily-resoluted format. The
+            columns mentioned above are created and populated.
         """
         
         def _complete_with_first_and_last_day(df_sheet):
             """
             This local method sets the initial and final dates of the 
             year, if these dates are not recorded (no input/output) in
-            these dates in the raw movements data
-            """
+            these dates in the raw movements data.
             
+            Parameters
+            ----------
+            
+            df_sheet : ``pandas.DataFrame``
+                The source data, possibly with no extrema (01-01 and 31-12).
+            
+            Returns
+            -------
+            
+            df_sheet : ``pandas.DataFrame``
+                The same data structure, but with the addition of extrema.
+                These extrema, if not originally present, are populated with
+                zeros.
+            """
             # Mock data to place Jan 1st and Dec 31st
-            fill_data = {"Category": [None], "Amount": [0.], "In": [0.], "Out": [0.]}
+            fill_data = {
+                "Category": [None],
+                "Amount": [0.],
+                "In": [0.],
+                "Out": [0.]
+            }
             if not self.jan_1st in df_sheet["Date"]:
                 row_jan_1st = pd.DataFrame(
                     data = {"Date": self.jan_1st} | fill_data
@@ -345,8 +490,19 @@ class Timeseries(Movements):
         """
         Obtain the net difference between the total input and total
         output for each month in the year.
-        """
         
+        Parameters
+        ----------
+        
+        inout_sheet : ``pandas.DataFrame``
+            The refined data structure in chronological daily-resoluted format.
+        
+        Returns
+        -------
+        
+        monthly_deltas : ``pandas.Series``
+            A series with the end-of-month delta for each month.
+        """
         monthly_deltas = (
             inout_sheet
             .reset_index()
@@ -372,14 +528,20 @@ class Timeseries(Movements):
         istantaneous growth. Ie: On daily basis, which is the 
         increase in capital, given the overall lifestyle cost, income ...
         The intercept is simply the initial stock value.
-        """
         
+        Parameters
+        ----------
+        
+        monthly_deltas : ``pandas.Series``
+            Data structure containing the end-of-month deltas.
+        """
         # If not provided, get the data saved as class attribute
         if not monthly_deltas:
             try:
                 monthly_deltas = self.monthly_deltas
             except:
-                AttributeError("`monthly_deltas` likely not saved as class attribute")
+                AttributeError("Attribute `monthly_deltas` not found\n"
+                               "Likely not saved as class attribute")
         
         # Slope
         estimated_slope = np.divide(
@@ -416,6 +578,18 @@ class Timeseries(Movements):
     #end
     
     def sumup_printout(self, save_file = False):
+        """
+        Print summary statistics of the year. Namely
+            1. Initial stock. Availability at January 1st
+            2. Final stock. Availability at December 31st
+            3. Average stock. Is the yearly average of the available stock
+            4. Estimated growth trendline slope. That is the net daily gain
+
+        Parameters
+        ----------
+        save_file : ``bool``, optional
+            Whether to save the summary table or not. The default is False.
+        """
         # Evaluate summary statistics
         self.compute_summary_statistics()
         
@@ -452,11 +626,27 @@ class Timeseries(Movements):
 
 
 class SpendingPatterns(Movements):
+    """
+    Class that performs the extrapolation of the statistics of the spending
+    patterns of the observed year. This class calls the simulation of future
+    scenarios. This call is delegated to antoher class, for modularity.
+    """
     def __init__(self, config):
         super().__init__(config)
     #end
     
     def fit(self, data = None):
+        """
+        Execute the spending patterns extrapolation. This interface method
+        only calls the method to learn the statistics of the inter-arrival 
+        times of each input/output flux, for each category.
+        
+        Parameters
+        ----------
+        data : ``pandas.DataFrame``, optional
+            The raw data source file. The default is None. If not given, it 
+            will be fetched from the source directory.
+        """
         if isinstance(data, pd.DataFrame):
             ops_sheet = data.copy()
         else:
@@ -472,9 +662,14 @@ class SpendingPatterns(Movements):
             - Average and std of each expense item
         
         This gives us the means to simulate synthetic data based on
-        the observed year
-        """
+        the observed year.
         
+        Parameters
+        ----------
+        
+        ops_sheet : ``pandas.DataFrame``
+            The raw source data spreadsheet.
+        """
         # Pivot table: from column-expanded view, we obtain a table
         # with columns == expenses items
         ops_sheet_categories = (
@@ -517,7 +712,7 @@ class SpendingPatterns(Movements):
         self.expenses = expenses
     #end
     
-    def simulate_yearly_expenses(self, rules, save = None):
+    def simulate_yearly_expenses(self, rules):
         """
         Once the statistics of expenses inter-arrival times and
         volumes are estimated, we can simulate a year similar to 
@@ -532,10 +727,19 @@ class SpendingPatterns(Movements):
         informs the simulation to enforce the given rules and not to
         simulate the expense items listed.
         
-        **NOTE**: As now, the simulation implemented is histogram-based. 
-        That is, we sample the most likely values given the observed 
-        values. A more likely version is KDE sampling, so we do not sample
-        observed values based on their actual occurrence frequency.
+        Parameters
+        ----------
+        
+        rules : ``dictionary``
+            Encodes the predictable expenses and incomes.
+        
+        Returns
+        -------
+        
+        simulated_inouts : ``list``
+            A list with as many items as the user-defined simulation runs.
+            Each element is a ``pandas.DataFrame``. This structure is generated
+            to imitate the original user-given source spreadsheet.
         """
         
         # Get the previously obtained statistics

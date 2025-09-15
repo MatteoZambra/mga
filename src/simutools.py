@@ -13,6 +13,12 @@ class SimulationTools:
             config,
             day_simulation_start
         ):
+        """
+        **NOTE**: As now, the simulation implemented is histogram-based. 
+        That is, we sample the most likely values given the observed 
+        values. A more likely version is KDE sampling, so we do not sample
+        observed values based on their actual occurrence frequency.
+        """
         
         # Initialize mock data structure
         simulated_expenses = {}
