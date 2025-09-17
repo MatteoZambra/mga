@@ -31,6 +31,14 @@ class Movements:
     derived classes. 
     """
     def __init__(self, config):
+        """
+        Initialization.
+        
+        Parameters
+        ----------
+        config : ``src.config.Constants``
+            The configuration class used.
+        """
         self.config = config
         
         # Save Jan 1st and Dec 31st, may be handy
@@ -662,7 +670,25 @@ class SpendingPatterns(Movements):
             - Average and std of each expense item
         
         This gives us the means to simulate synthetic data based on
-        the observed year.
+        the observed year. The following format is used. The source file is
+        pivoted by the categories. This gives a table with as many rows as
+        the overall days in the spreadsheet (days in which inputs/outputs)
+        happened, and as many columns as the income/expense categories.
+        The table obtained is sparse, the only entries being the expenses or
+        incomes associated to the (day, category) accessors. This format is
+        useful to
+            1. Aggregate the movements for each category
+            2. Evaluate the statistics of both the movements volumes and
+               their inter-arrival times. 
+        The second element is particularly important. A sound simulation 
+        must take into account a realistic expense/income occurrence pattern.
+        
+        **NOTE**: The end result is:
+            1. A dictionary of ``pandas.Series``, indexed by the categories.
+               That is, the columns of the table explained above.
+            2. A dictionary of lags. Not the columns of the table above, but
+               the collection of inter-arrival times of the items of the 
+               columns of the mentioned table.
         
         Parameters
         ----------
@@ -748,7 +774,9 @@ class SpendingPatterns(Movements):
         
         # Get the simulated expense items
         simulated_inouts = []
+        simulated_timeseries = []
         for run in tqdm(range(self.config.SIMULATION_RUNS)):
+            # Raw source data
             simulated_inout = SimulationTools.simulate_expense_voice(
                 expenses_volumes,
                 expenses_lags,
@@ -756,9 +784,19 @@ class SpendingPatterns(Movements):
                 self.config,
                 self.jan_1st
             )
+            
+            # Timeseries-wrap. To obtain chronological time series
+            timeseries = Timeseries(self.config)
+            timeseries.setup(simulated_inout)
+            
+            # Save both the simulated raw source data and the obtained 
+            # timeseries representations. Note that we save the `inout_sheet`
+            # attribute of each timeseries object. We only want the prepared
+            # input/output table in chronological daily order
             simulated_inouts.append(simulated_inout)
+            simulated_timeseries.append(timeseries.inout_sheet)
         
         # Return to the main script
-        return simulated_inouts
+        return simulated_inouts, simulated_timeseries
     #end
 #end

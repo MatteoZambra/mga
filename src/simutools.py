@@ -5,6 +5,9 @@ from src.utils import DataUtils
 
 
 class SimulationTools:
+    """
+    Class to collect simulation utilities.
+    """
     @staticmethod
     def simulate_expense_voice(
             expenses_volumes,
@@ -14,10 +17,38 @@ class SimulationTools:
             day_simulation_start
         ):
         """
+        Based on observed spending patterns, perform :math:`k`-years-ahead 
+        simulation of likely scenarios. Since expenses items and their 
+        inter-arrival times are based on observations, it is assumed to be a 
+        realistic simulation. The rules encoded by the user in the configuration
+        are accounted for, to enforce predictable input/output fluxes.
+        
         **NOTE**: As now, the simulation implemented is histogram-based. 
         That is, we sample the most likely values given the observed 
         values. A more likely version is KDE sampling, so we do not sample
         observed values based on their actual occurrence frequency.
+        
+        Parameters
+        ----------
+        
+        expenses_volumes : ``dictionary`` of ``pandas.Series``
+            The columns of the year pivoted table. This is the time series
+            of the occurrences of the movements for each category.
+        expenses_lags : ``dictionary`` of ``pandas.Series``
+            The collection of inter-arrival times associated to the movements
+            of each category.
+        rules : ``dictionary``
+            Contains the instructions about recurrent and predictable movements.
+        config : ``src.config.Constants``
+            The configuration class.
+        day_simulation_start : ``pd.Timestamp``
+            The first day from which the simulation starts.
+        
+        Returns
+        -------
+        
+        simulated_inout : ``pandas.DataFrame``
+            The simulated raw source data spreadsheet.
         """
         
         # Initialize mock data structure

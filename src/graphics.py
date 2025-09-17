@@ -105,6 +105,7 @@ class Plots:
     @staticmethod
     def plot_simulation_runs(
             simulated_inouts,
+            backend = "matplotlib",
             trendline_params = None,
             plot_trend_line = False
         ):

@@ -50,20 +50,16 @@ if __name__ == "__main__":
         spending_patterns.fit()
         
         ## Perform and ahead-in-time simulation
-        simulated_inout = spending_patterns.simulate_yearly_expenses(
+        ## Note: We require the first argument of the method call. The
+        ## first argument would be the simulated raw input/output logs.
+        ## Which are not interesting for the timeseries visualization
+        _, simulated_timeseries = spending_patterns.simulate_yearly_expenses(
                 rules = cfg.SIMULATION_COLUMNS_CONSTANTS,
         )
         
-        ## Instantiate Timeseries classes to host source simulated data
-        simulated_inout_timeseries = []
-        for inout in simulated_inout:
-            _timeseries = Timeseries(cfg)
-            _timeseries.setup(inout)
-            simulated_inout_timeseries.append(_timeseries.inout_sheet)
-        
         ## Plot the simulation runs
         _ = Plots.plot_simulation_runs(
-            simulated_inout_timeseries,
+            simulated_timeseries,
             trendline_params = timeseries.estimated_lm_params,
             plot_trend_line = True
         )
