@@ -116,6 +116,7 @@ A core component is the `./config/config.json` file. This allows to specify
 - Header: How many rows to skip before to find the table specified above in the source file
 - Date format
 - Date separation
+- Start and end dates. If not specified, the start and end date are set to January 1st and December 31st
 - Categories income: A list of strings specifying the income categories. Likely `"Salary"`, ...
 - Columns: The columns of the table. If the source spreadsheet is prepared as above, specify `"Date"`, `"Category"`, `"Amount"`
 - Simulation columns constants: This is a dictionary that sets the recurrent and predictable expenses

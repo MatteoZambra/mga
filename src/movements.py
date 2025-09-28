@@ -94,7 +94,8 @@ class Movements:
         """
         Helper methods to retrieve the start and end dates of the period 
         considered. If not specified in the configuration file, the dates 
-        January 1st and December 31st are assumed as period limits.
+        January 1st and December 31st are assumed as period limits. Note
+        that the dates should be specified in the configuration file.
         
         This is used to impose these date boundaries if not present in the 
         source data.
