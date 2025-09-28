@@ -17,6 +17,8 @@ class UserDefinedConstants:
     HEADER: int
     DATE_FORMAT: List[str]
     DATE_SEPARATION: str
+    START_DATE: str
+    END_DATE: str
     CATEGORIES_INCOME: List[str]
     COLUMNS: List[str]
     SIMULATION_COLUMNS_CONSTANTS: Dict[str, Dict[str, int]]
@@ -39,6 +41,8 @@ class Constants:
         self.HEADER = cfg_file.HEADER
         self.DATE_FORMAT = cfg_file.DATE_FORMAT
         self.DATE_SEPARATION = cfg_file.DATE_SEPARATION
+        self.START_DATE = cfg_file.START_DATE
+        self.END_DATE = cfg_file.END_DATE
         self.CATEGORIES_INCOME = cfg_file.CATEGORIES_INCOME
         self.COLUMNS = cfg_file.COLUMNS
         self.SIMULATION_COLUMNS_CONSTANTS = cfg_file.SIMULATION_COLUMNS_CONSTANTS

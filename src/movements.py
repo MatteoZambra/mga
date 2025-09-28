@@ -92,21 +92,47 @@ class Movements:
     
     def define_year_extremes(self):
         """
-        Helper methods to retrieve the dates of January 1st and December 31st.
+        Helper methods to retrieve the start and end dates of the period 
+        considered. If not specified in the configuration file, the dates 
+        January 1st and December 31st are assumed as period limits.
+        
         This is used to impose these date boundaries if not present in the 
         source data.
         """
-        # Add Jan 1st and Dec 31st, if missing
-        self.jan_1st = DataUtils.get_formatted_date(
-            date_list = ["01", "01", str(self.config.YEAR)],
-            format_list = ["%d", "%m", "%Y"],
-            separator = self.config.DATE_SEPARATION
-        )
-        self.dec_31st = DataUtils.get_formatted_date(
-            date_list = ["31", "12", str(self.config.YEAR)],
-            format_list = ["%d", "%m", "%Y"],
-            separator = self.config.DATE_SEPARATION
-        )
+        
+        # Start date
+        if not self.config.START_DATE:
+            # If end date is not given, defaults to 1st January
+            self.start_date = DataUtils.get_formatted_date(
+                date_list = ["01", "01", str(self.config.YEAR)],
+                format_list = ["%d", "%m", "%Y"],
+                separator = self.config.DATE_SEPARATION
+            )
+        else:
+            # Otherwise, parse the date given in config.json
+            self.start_date = DataUtils.get_formatted_date(
+                self.config.START_DATE.split(self.config.DATE_SEPARATION)
+                + [str(self.config.YEAR)],
+                format_list = ["%d", "%m", "%Y"],
+                separator = self.config.DATE_SEPARATION
+            )
+        
+        # End date
+        if not self.config.END_DATE:
+            # If end date is not given, defaults to 31st December
+            self.end_date = DataUtils.get_formatted_date(
+                date_list = ["31", "12", str(self.config.YEAR)],
+                format_list = ["%d", "%m", "%Y"],
+                separator = self.config.DATE_SEPARATION
+            )
+        else:
+            # Ibid.
+            self.end_date = DataUtils.get_formatted_date(
+                date_list = self.config.END_DATE.split(self.config.DATE_SEPARATION)
+                + [str(self.config.YEAR)],
+                format_list = ["%d", "%m", "%Y"],
+                separator = self.config.DATE_SEPARATION
+            )
     #end
 #end
 
@@ -434,16 +460,16 @@ class Timeseries(Movements):
                 "In": [0.],
                 "Out": [0.]
             }
-            if not self.jan_1st in df_sheet["Date"]:
-                row_jan_1st = pd.DataFrame(
-                    data = {"Date": self.jan_1st} | fill_data
+            if not self.start_date in df_sheet["Date"]:
+                row_start_date = pd.DataFrame(
+                    data = {"Date": self.start_date} | fill_data
                 )
-                df_sheet = pd.concat([row_jan_1st, df_sheet], axis = 0)
-            if not self.dec_31st in df_sheet["Date"]:
-                row_dec_31st = pd.DataFrame(
-                    data = {"Date": self.dec_31st} | fill_data
+                df_sheet = pd.concat([row_start_date, df_sheet], axis = 0)
+            if not self.end_date in df_sheet["Date"]:
+                row_end_date = pd.DataFrame(
+                    data = {"Date": self.end_date} | fill_data
                 )
-                df_sheet = pd.concat([df_sheet, row_dec_31st], axis = 0)
+                df_sheet = pd.concat([df_sheet, row_end_date], axis = 0)
             return df_sheet
         #end
         
@@ -582,7 +608,7 @@ class Timeseries(Movements):
         stock at the end of the year, ie on Dec 31st.
         """
         self.average_stock = self.inout_sheet["Available"].mean()
-        self.stock_at_Dec31st = self.inout_sheet.loc[self.dec_31st, "Available"]
+        self.stock_at_enddate = self.inout_sheet.loc[self.end_date, "Available"]
     #end
     
     def sumup_printout(self, save_file = False):
@@ -604,14 +630,14 @@ class Timeseries(Movements):
         stats = pd.DataFrame(
             data = [
                 f"{self.stock_init:.2f}",
-                f"{self.stock_at_Dec31st:.2f}",
+                f"{self.stock_at_enddate:.2f}",
                 f"{self.average_stock:.2f}",
                 f"{self.estimated_lm_params.slope:.2f}"
             ],
             columns = ["Amount (EUR)"],
             index = [
-                f"Initial stock (at {str(self.jan_1st.date())})",
-                f"Final stock (at {str(self.dec_31st.date())})",
+                f"Initial stock (at {str(self.start_date.date())})",
+                f"Final stock (at {str(self.end_date.date())})",
                 "Average stock",
                 "Estimated daily capital growth"
             ]
