@@ -44,7 +44,7 @@ if __name__ == "__main__":
     
     
     # Forecasting
-    if True:
+    if False:
         # --- Extrapolate the spending patterns of the selected year
         spending_patterns = SpendingPatterns(cfg)
         spending_patterns.fit()
